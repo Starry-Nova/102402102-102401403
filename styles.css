@@ -1,5 +1,4 @@
 @charset "UTF-8";
-/* 每个标签为一个整体；天璇、天玑置于星点下方，其余置于上方。 */
 /* Quiet, code-native doodles inspired by the supplied sketches. */
 body::before{content:'';position:fixed;left:8px;top:160px;width:115px;height:300px;background:url('assets/star-trail.svg') center/contain no-repeat;opacity:.22;pointer-events:none;z-index:-1}
 body{isolation:isolate}
