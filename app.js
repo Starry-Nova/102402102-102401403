@@ -55,5 +55,7 @@ const navigationStars=[
  ['profile','玉衡','我的星册',36,32],['return','开阳','星物归还',22,55],
  ['thanks','摇光','赠玫瑰致谢',8,43]
 ];
-$('#page-links').innerHTML='<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M86 25 L78 66 L57 61 L53 20 L86 25 M53 20 L36 32 L22 55 L8 43"/></svg>'+navigationStars.map(([page,name,label,left,top],i)=>`<button class="nav-star" data-go="${page}" style="left:${left}%;top:${top}%" aria-label="${name}·${label}"><span>✦</span><b>${name}</b><small>${label}</small></button>`).join('');
+// 连线和按钮共用同一组坐标，星点的中心即连线顶点。
+const navigationPath=[0,1,2,3,0,3,4,5,6].map((index,i)=>`${i?'L':'M'}${navigationStars[index][3]} ${navigationStars[index][4]}`).join(' ');
+$('#page-links').innerHTML=`<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="${navigationPath}"/></svg>`+navigationStars.map(([page,name,label,left,top])=>`<button class="nav-star" data-go="${page}" style="left:${left}%;top:${top}%" aria-label="${name}·${label}"><span class="nav-star-icon" aria-hidden="true">✦</span><span class="nav-star-label">${name} · ${label}</span></button>`).join('');
 window.addEventListener('hashchange',()=>go(location.hash.slice(1)));go(pages[location.hash.slice(1)]?location.hash.slice(1):'home');
