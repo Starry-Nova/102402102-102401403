@@ -9,7 +9,13 @@ const coords={'图书馆':[68,39],'教学区':[60,27],'生活区':[28,56],'运�
 const pages={home:'01 天枢·星图首页',map:'02 校园星图',search:'03 天璇·寻觅星点',detail:'04 天玑·观星识物',publish:'05 天权·登记星启',success:'06 星启发布成功',profile:'07 我的星册',bind:'08 绑定手机',verify:'09 校园实名认证',progress:'10 认证进度与结果',return:'11 开阳·星物归还',thanks:'12 摇光·赠玫瑰致谢'};
 const slogans=[['Pick the lost stars, send roses in return.','拾起散落星辰，归还赠以玫瑰。'],['PickStar · Retrieve your lost star.','PickStar · 寻回属于你的星辰。'],['Pick a star, reunite belongings.','拾取星光，物归原主。']];
 const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
-const seed=[];
+const seed=[
+ {id:'s1',title:'黑色蓝牙耳机',category:'电子产品',area:'图书馆',date:'2026-10-03',type:'lost',status:'seeking',description:'图书馆二层靠窗座位附近遗失，耳机盒上有一颗小星星贴纸。',contact:'13800000001',owner:true,publisher:'Nova',finder:'小面包',icon:'🎧'},
+ {id:'s2',title:'星星卡套里的校园卡',category:'证件卡包',area:'教学区',date:'2026-10-04',type:'found',status:'claimed',description:'在教学楼走廊拾到。请联系时核对卡片姓名和卡套特征。',contact:'13800000002',owner:false,publisher:'小面包',finder:'小面包',icon:'✉'},
+ {id:'s3',title:'蓝色保温杯',category:'其他',area:'运动场',date:'2026-10-02',type:'found',status:'returned',description:'已与失主核对并完成线下交接，谢谢每一份善意。',contact:'13800000002',owner:false,publisher:'小面包',finder:'小面包',recipient:'me',icon:'☕'},
+ {id:'s4',title:'月亮挂件钥匙串',category:'钥匙',area:'生活区',date:'2026-10-01',type:'lost',status:'found',description:'钥匙已找回，准备向拾主送出一份感谢。',contact:'13800000001',owner:true,publisher:'Nova',finder:'小面包',recipient:'me',icon:'🗝'},
+ {id:'s5',title:'一本手写课堂笔记',category:'书籍文具',area:'北门',date:'2026-10-04',type:'found',status:'claimed',description:'米色封面，里面有蓝色墨水笔记。',contact:'13800000001',owner:true,publisher:'Nova',finder:'Nova',icon:'📖'}
+];
 function read(key,fallback){return fallback}
 let items=read('pickstar-v2-items',seed), user=read('pickstar-v2-user',{bound:false,phone:'',verification:'none'});
 if(!Array.isArray(items))items=seed;if(!user||typeof user!=='object')user={bound:false,phone:'',verification:'none'};
@@ -23,7 +29,9 @@ const accountDrafts={};
 function isOwner(item){return item.publisher===activeAccount}
 function recipientOf(item){return item.recipient==='me'?'Nova':item.recipient}
 
+const samplePhotos={s1:'assets/earbuds.jpg',s2:'assets/card-holder.jpg',s3:'assets/bottle.jpg',s5:'assets/notebook.jpg'};
 // Add supplied photos to existing demo records without resetting saved status or user uploads.
+items.forEach(x=>{if(samplePhotos[x.id]&&!x.photo)x.photo=samplePhotos[x.id]});
 let route='home',selected='s1',mapMode='browse',backTo='profile',draft={},filter={keyword:'',category:'',area:'',date:'',status:''},codeSent=false;
 function save(){accounts[activeAccount]=user;return true}
 function modal(title,body){$('#modal-body').innerHTML=`<h2>${title}</h2>${body}`;if(!$('#modal').open)$('#modal').showModal()}
@@ -32,9 +40,12 @@ const button=(text,go,cls='')=>`<button class="${cls}" data-go="${go}">${text}</
 const dipper=`<svg class="dipper" viewBox="0 0 330 185" aria-hidden="true"><path d="M20 140 L80 110 L140 120 L188 84 L240 100 L290 45 L235 20 L188 84" fill="none" stroke="#9b91c9" stroke-width="1.5" stroke-dasharray="4 5"/>${[[20,140],[80,110],[140,120],[188,84],[240,100],[290,45],[235,20]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="4" fill="#b4a2dc"/><text x="${x-8}" y="${y+7}" fill="#a99cd1" font-size="25">✧</text>`).join('')}</svg>`;
 function hero(title,index=0){return `<section class="hero">${dipper}<div class="eyebrow">PICKSTAR / FOLLOW THE BIG DIPPER</div><h1>${title}</h1><p class="english">${slogans[index][0]}</p><p class="art">${slogans[index][1]}</p></section>`}
 function options(list,value,first='全部'){return `<option value="">${first}</option>`+list.map(x=>`<option ${value===x?'selected':''}>${esc(x)}</option>`).join('')}
+function notes(list){return list.length?`<div class="cards">${list.map(x=>`<button class="note ${['found','returned'].includes(x.status)?'settled':'active-note'}" data-item="${esc(x.id)}">${star(x.status)}<span class="badge">${labels[x.status]}</span><h3>${esc(x.title)}</h3>${x.photo?`<span class="note-window"><img src="${esc(x.photo)}" alt="${esc(x.title)}实物照片" loading="lazy"></span>`:`<p class="note-description">${esc(x.description.slice(0,100))}</p>`}<p class="muted">⌖ ${esc(x.area)} · ${esc(x.date)}</p><small>${x.type==='lost'?'寻物启事':'拾物招领'}　${esc(x.publisher)}</small></button>`).join('')}</div>`:'<p class="empty">✧ 暂时没有找到星星，试着调整筛选条件。</p>'}
+function mapView(){return `<div class="map" id="campus-map"><img src="assets/campus-night.png" alt="福州大学校园夜景手绘地图">${items.map(x=>{const p=x.point||coords[x.area]||[50,50];return `<button class="pin" style="left:${p[0]}%;top:${p[1]}%" data-pin="${esc(x.id)}" aria-label="${esc(x.title)} ${labels[x.status]}">${star(x.status)}</button>`}).join('')}</div><div class="map-caption">${Object.entries(labels).map(([k,v])=>`${star(k)} ${v}`).join('　')}</div>`}
 function current(){return items.find(x=>x.id===selected)||items[0]}
 function render(){const x=current();let html='';
- if(route==='home')html=hero('天枢 · 星图首页')+`<section class="panel"><h2>让遗失的星星找到归途</h2><p>本阶段完成页面布局与导航。地图、便签和业务逻辑会在后续阶段逐项加入。</p></section>`;
+ if(route==='home')html=hero('天枢 · 星图首页')+`<div class="layout"><section class="panel"><div class="section-title"><h2>校园星图</h2>${button('展开地图 ↗','map')}</div>${mapView()}</section><aside class="panel"><p class="eyebrow">A LITTLE LIGHT, A LITTLE KINDNESS</p><h2>每一颗星<br>都在等一个归途。</h2><p class="english">Lost, found,<br>and loved again.</p><p>让寻找有迹可循，让善意被温柔收藏。</p><div class="actions">${button('✦ 我丢失了','publish','primary')}</div></aside></div><div class="section-title"><h2>散落在校园的星星</h2>${button('寻觅全部 →','search')}</div>${notes(items)}`;
+ if(route==='map')html=hero('校园星图 · 循光而行',2)+`<section class="panel"><p>点击星点浏览物品登记位置。</p>${mapView()}</section>`;
  if(!html)html=hero(pages[route]||'拾星')+'<section class="panel"><p>本教学阶段尚未实现此功能，请按阶段说明继续学习。</p></section>';
  $('#app').innerHTML=html;document.title=`${pages[route]} · 拾星`;}
 function verificationName(){return '尚未加入认证功能'}
