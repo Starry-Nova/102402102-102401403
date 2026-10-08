@@ -28,7 +28,12 @@ user=accounts[activeAccount];
 const accountDrafts={};
 function isOwner(item){return item.publisher===activeAccount}
 function recipientOf(item){return item.recipient==='me'?'Nova':item.recipient}
-
+function switchAccount(name){
+ if(!accountNames.includes(name))return;
+ captureDraft();accountDrafts[activeAccount]=draft;accounts[activeAccount]=user;
+ activeAccount=name;user=accounts[name];draft=accountDrafts[name]||{};codeSent=false;backTo='profile';mapMode='browse';
+ if(save()){$('#modal').close();route='profile';render()}
+}
 const samplePhotos={s1:'assets/earbuds.jpg',s2:'assets/card-holder.jpg',s3:'assets/bottle.jpg',s5:'assets/notebook.jpg'};
 // Add supplied photos to existing demo records without resetting saved status or user uploads.
 items.forEach(x=>{if(samplePhotos[x.id]&&!x.photo)x.photo=samplePhotos[x.id]});
@@ -46,10 +51,13 @@ function current(){return items.find(x=>x.id===selected)||items[0]}
 function filtered(){return items.filter(x=>(!filter.keyword||`${x.title} ${x.description}`.toLowerCase().includes(filter.keyword.toLowerCase().trim()))&&(!filter.category||x.category===filter.category)&&(!filter.area||x.area===filter.area)&&(!filter.date||x.date>=filter.date)&&(!filter.status||x.status===filter.status))}
 function fields(){return `<div class="filters"><label>品类<select name="category">${options(categories,filter.category)}</select></label><label>地点<select name="area">${options(areas,filter.area)}</select></label><label>此日期之后<input type="date" name="date" value="${esc(filter.date)}"></label><label>状态<select name="status"><option value="">全部</option>${Object.entries(labels).map(([k,v])=>`<option value="${k}" ${filter.status===k?'selected':''}>${v}</option>`).join('')}</select></label></div>`}
 function render(){const x=current();let html='';
- if(route==='home')html=hero('天枢 · 星图首页')+`<form class="searchbar" data-form="search"><input name="keyword" aria-label="搜索物品" placeholder="寻一颗星，找一件心爱之物……"><button class="primary">寻觅星点</button><button type="button" data-action="filters">筛选 ☷</button></form><div class="layout"><section class="panel"><div class="section-title"><h2>校园星图</h2>${button('展开地图 ↗','map')}</div>${mapView()}</section><aside class="panel"><p class="eyebrow">A LITTLE LIGHT, A LITTLE KINDNESS</p><h2>每一颗星<br>都在等一个归途。</h2><p class="english">Lost, found,<br>and loved again.</p><p>让寻找有迹可循，让善意被温柔收藏。</p><div class="actions">${button('✦ 我丢失了','publish','primary')}</div></aside></div><div class="section-title"><h2>散落在校园的星星</h2>${button('寻觅全部 →','search')}</div>${notes(items)}`;
- if(route==='map')html=hero('校园星图 · 循光而行',2)+`<section class="panel"><p>点击星点浏览物品登记位置。</p>${mapView()}</section>`;
+ $('#account-menu').innerHTML=`<button data-action="accounts">◉ ${esc(activeAccount)} · 切换账号</button>`;
+ if(route==='home')html=hero('天枢 · 星图首页')+`<form class="searchbar" data-form="search"><input name="keyword" aria-label="搜索物品" placeholder="寻一颗星，找一件心爱之物……"><button class="primary">寻觅星点</button><button type="button" data-action="filters">筛选 ☷</button></form><div class="layout"><section class="panel"><div class="section-title"><h2>校园星图</h2>${button('展开地图 ↗','map')}</div>${mapView()}</section><aside class="panel"><p class="eyebrow">A LITTLE LIGHT, A LITTLE KINDNESS</p><h2>每一颗星<br>都在等一个归途。</h2><p class="english">Lost, found,<br>and loved again.</p><p>让寻找有迹可循，让善意被温柔收藏。</p><div class="actions">${button('✦ 我丢失了','publish','primary')}<button class="purple" data-action="found-publish">✦ 我捡到了</button></div></aside></div><div class="section-title"><h2>散落在校园的星星</h2>${button('寻觅全部 →','search')}</div>${notes(items)}`;
+ if(route==='map')html=hero('校园星图 · 循光而行',2)+`<section class="panel"><p>${mapMode==='select'?'点击地图任意位置选择发布地点；星点位置仅为示意。':'点击发光星点，查看物品线索。'}</p>${mapView()}<div class="actions"><button data-action="locate">◎ 立即定位（演示）</button><button data-action="manual">⌖ 手动选点</button>${button('返回发布','publish')}</div></section>`;
  if(route==='search')html=hero('天璇 · 寻觅星点',1)+`<form data-form="search" class="panel"><div class="searchbar"><input name="keyword" value="${esc(filter.keyword)}" placeholder="物品名称或特征" aria-label="关键词"><button class="primary">寻找</button><button type="button" data-action="clear-filter">重置</button></div>${fields()}</form><p class="muted">找到 ${filtered().length} 颗星星</p>${notes(filtered())}`;
  if(route==='detail')html=hero('天玑 · 观星识物',1)+`<section class="panel"><h2>${esc(x.title)}</h2>${star(x.status)} <span class="badge">${labels[x.status]}</span><p>${esc(x.description)}</p><div class="facts"><div>地点：${esc(x.area)}</div><div>日期：${esc(x.date)}</div><div>类别：${esc(x.category)}</div><div>发布者：${esc(x.publisher)}</div></div><h2>玉衡 · 星语核验</h2><p>联系前请核对外观、时间和地点；联系方式功能在后续阶段加入。</p></section>`;
+ if(route==='publish')html=hero('天权 · 登记星启',2)+`<form data-form="publish" class="panel form" novalidate><div class="two"><label class="notice"><input type="radio" name="type" value="lost" ${draft.type!=='found'?'checked':''}> ${star('seeking')} 我丢失了</label><label class="notice"><input type="radio" name="type" value="found" ${draft.type==='found'?'checked':''}> ${star('claimed')} 我捡到了</label></div><label>物品名称<input name="title" maxlength="60" value="${esc(draft.title)}" placeholder="给这颗星星一个名字"></label><div class="two"><label>物品类别<select name="category">${options(categories,draft.category,'请选择')}</select></label><label>遗失 / 拾取日期<input type="date" name="date" max="${today()}" value="${esc(draft.date||today())}"></label></div><label>登记地点<select name="area">${options(areas,draft.area,'请选择')}</select></label><button type="button" data-action="choose-place">⌖ 到校园星图选点</button><label>物品照片（可选，最大 2MB）<input type="file" name="photo" accept="image/png,image/jpeg,image/webp"></label>${draft.photo?'<p class="muted">照片已保留</p>':''}<label>特征描述<textarea name="description" maxlength="500">${esc(draft.description)}</textarea></label><label>联系手机<input name="contact" inputmode="tel" value="${esc(draft.contact||user.phone)}" maxlength="11"></label><p class="muted">本阶段发布暂存在内存，刷新后恢复示例。</p><button class="primary">✧ 点亮这颗星</button></form>`;
+ if(route==='profile'){const mine=items.filter(isOwner);html=hero('我的星册 · 收藏善意')+`<section class="panel profile-identity"><img class="profile-avatar" src="assets/avatar-nova.svg" alt="个人头像"><div><h2>${esc(activeAccount)} 的星册</h2><p>模拟账号 · 我的发布</p></div></section><h2>我的发布（${mine.length}）</h2>${notes(mine)}`;}
  if(!html)html=hero(pages[route]||'拾星')+'<section class="panel"><p>本教学阶段尚未实现此功能，请按阶段说明继续学习。</p></section>';
  $('#app').innerHTML=html;document.title=`${pages[route]} · 拾星`;}
 function verificationName(){return '尚未加入认证功能'}
@@ -57,14 +65,24 @@ function canThank(){return false}
 function go(page){if(!pages[page])page='home';route=page;render();window.scrollTo(0,0)}
 function captureDraft(){const form=$('[data-form="publish"]');if(form){const data=Object.fromEntries(new FormData(form));delete data.photo;draft={...draft,...data};}}
 document.addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;
+ if(b.dataset.account){switchAccount(b.dataset.account);return}
  if(b.dataset.go){$('#modal').close();go(b.dataset.go);return}if(b.dataset.item){selected=b.dataset.item;go('detail');return}
  if(b.dataset.pin){const x=items.find(i=>i.id===b.dataset.pin);modal(`${star(x.status)} ${esc(x.title)}`,`<p>${esc(x.area)} · ${labels[x.status]}</p><p>${esc(x.description)}</p><button data-preview="${esc(x.id)}">查看详情</button>`);return}
  if(b.dataset.preview){selected=b.dataset.preview;$('#modal').close();go('detail');return}
- const a=b.dataset.action;if(a==='filters')modal('筛选星点',`<form data-form="filter">${fields()}<button class="primary">应用筛选</button></form>`);
+ const a=b.dataset.action;if(a==='accounts'){modal('模拟登录 · 选择账号',`<p>三个账号共享物品信息，分别保存手机绑定、认证和个人星册。</p><div class="actions">${accountNames.map(name=>`<button data-account="${name}" class="${name===activeAccount?'primary':''}">${name}${name===activeAccount?' · 当前':''}</button>`).join('')}</div><p class="muted">本地演示，无需密码，不连接真实账号服务。</p>`);return}if(a==='filters')modal('筛选星点',`<form data-form="filter">${fields()}<button class="primary">应用筛选</button></form>`);
  if(a==='clear-filter'){filter={keyword:'',category:'',area:'',date:'',status:''};render()}
+ if(a==='found-publish'){draft.type='found';go('publish')}
+ if(a==='choose-place'){captureDraft();mapMode='select';go('map')}
+ if(a==='manual'){mapMode='select';render()}
+ if(a==='locate')modal('定位失败 · 星光仍可抵达','<p>当前为模拟地图，未请求真实定位。请手动在校园地图中选择位置。</p><button data-action="resume-map">手动选点</button>');
+ if(a==='resume-map'){mapMode='select';$('#modal').close();render()}
 });
+document.addEventListener('click',e=>{const map=e.target.closest('#campus-map');if(!map||mapMode!=='select'||route!=='map'||e.target.closest('button'))return;const rect=map.getBoundingClientRect();draft.point=[+(100*(e.clientX-rect.left)/rect.width).toFixed(2),+(100*(e.clientY-rect.top)/rect.height).toFixed(2)];modal('选定一颗星的位置',`<form data-form="place"><p>已记录地图选点。请选择该位置所属区域：</p><select name="area">${options(areas,draft.area,'请选择区域')}</select><button class="primary">确认选址，返回发布</button></form>`)});
+document.addEventListener('change',e=>{if(e.target.name==='photo'){const f=e.target.files[0];if(!f)return;if(!/^image\/(png|jpeg|webp)$/.test(f.type)||f.size>2*1024*1024){e.target.value='';modal('图片不符合要求','<p>请选择不超过 2MB 的 PNG、JPG 或 WebP 图片。</p>');return}const uploadAccount=activeAccount;const reader=new FileReader();reader.onload=()=>{if(activeAccount===uploadAccount)draft.photo=reader.result};reader.readAsDataURL(f)}});
 document.addEventListener('submit',e=>{const form=e.target,kind=form.dataset.form;if(!kind)return;e.preventDefault();const d=Object.fromEntries(new FormData(form));
  if(kind==='search'||kind==='filter'){filter={...filter,...d};$('#modal').close();go('search')}
+ if(kind==='place'){if(!areas.includes(d.area))return;draft.area=d.area;mapMode='browse';$('#modal').close();go('publish')}
+ if(kind==='publish'){captureDraft();const errors=[];if((d.title||'').trim().length<2)errors.push('物品名称至少填写两个字。');if(!categories.includes(d.category))errors.push('请选择物品类别。');if(!areas.includes(d.area))errors.push('请选择登记地点。');if(!d.date||d.date>today())errors.push('请选择今天或之前的日期。');if(!/^1\d{10}$/.test(d.contact))errors.push('请填写 11 位手机号码。');if(!(d.description||'').trim())errors.push('请填写物品特征描述。');if(errors.length){modal('表单需要补充',`<ul class="error">${errors.map(v=>`<li>${v}</li>`).join('')}</ul>`);return}const x={...draft,id:`star-${Date.now()}`,title:d.title.trim(),description:d.description.trim(),status:d.type==='lost'?'seeking':'claimed',owner:true,publisher:activeAccount,finder:d.type==='found'?activeAccount:'',icon:'✧'};items.unshift(x);if(!save()){items.shift();return}selected=x.id;draft={};go('detail')}
 });
 const navigationStars=[
  ['home','天枢','星图首页',86,25],['search','天璇','寻觅星点',78,66],
