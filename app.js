@@ -43,9 +43,12 @@ function options(list,value,first='全部'){return `<option value="">${first}</o
 function notes(list){return list.length?`<div class="cards">${list.map(x=>`<button class="note ${['found','returned'].includes(x.status)?'settled':'active-note'}" data-item="${esc(x.id)}">${star(x.status)}<span class="badge">${labels[x.status]}</span><h3>${esc(x.title)}</h3>${x.photo?`<span class="note-window"><img src="${esc(x.photo)}" alt="${esc(x.title)}实物照片" loading="lazy"></span>`:`<p class="note-description">${esc(x.description.slice(0,100))}</p>`}<p class="muted">⌖ ${esc(x.area)} · ${esc(x.date)}</p><small>${x.type==='lost'?'寻物启事':'拾物招领'}　${esc(x.publisher)}</small></button>`).join('')}</div>`:'<p class="empty">✧ 暂时没有找到星星，试着调整筛选条件。</p>'}
 function mapView(){return `<div class="map" id="campus-map"><img src="assets/campus-night.png" alt="福州大学校园夜景手绘地图">${items.map(x=>{const p=x.point||coords[x.area]||[50,50];return `<button class="pin" style="left:${p[0]}%;top:${p[1]}%" data-pin="${esc(x.id)}" aria-label="${esc(x.title)} ${labels[x.status]}">${star(x.status)}</button>`}).join('')}</div><div class="map-caption">${Object.entries(labels).map(([k,v])=>`${star(k)} ${v}`).join('　')}</div>`}
 function current(){return items.find(x=>x.id===selected)||items[0]}
+function filtered(){return items.filter(x=>(!filter.keyword||`${x.title} ${x.description}`.toLowerCase().includes(filter.keyword.toLowerCase().trim()))&&(!filter.category||x.category===filter.category)&&(!filter.area||x.area===filter.area)&&(!filter.date||x.date>=filter.date)&&(!filter.status||x.status===filter.status))}
+function fields(){return `<div class="filters"><label>品类<select name="category">${options(categories,filter.category)}</select></label><label>地点<select name="area">${options(areas,filter.area)}</select></label><label>此日期之后<input type="date" name="date" value="${esc(filter.date)}"></label><label>状态<select name="status"><option value="">全部</option>${Object.entries(labels).map(([k,v])=>`<option value="${k}" ${filter.status===k?'selected':''}>${v}</option>`).join('')}</select></label></div>`}
 function render(){const x=current();let html='';
- if(route==='home')html=hero('天枢 · 星图首页')+`<div class="layout"><section class="panel"><div class="section-title"><h2>校园星图</h2>${button('展开地图 ↗','map')}</div>${mapView()}</section><aside class="panel"><p class="eyebrow">A LITTLE LIGHT, A LITTLE KINDNESS</p><h2>每一颗星<br>都在等一个归途。</h2><p class="english">Lost, found,<br>and loved again.</p><p>让寻找有迹可循，让善意被温柔收藏。</p><div class="actions">${button('✦ 我丢失了','publish','primary')}</div></aside></div><div class="section-title"><h2>散落在校园的星星</h2>${button('寻觅全部 →','search')}</div>${notes(items)}`;
+ if(route==='home')html=hero('天枢 · 星图首页')+`<form class="searchbar" data-form="search"><input name="keyword" aria-label="搜索物品" placeholder="寻一颗星，找一件心爱之物……"><button class="primary">寻觅星点</button><button type="button" data-action="filters">筛选 ☷</button></form><div class="layout"><section class="panel"><div class="section-title"><h2>校园星图</h2>${button('展开地图 ↗','map')}</div>${mapView()}</section><aside class="panel"><p class="eyebrow">A LITTLE LIGHT, A LITTLE KINDNESS</p><h2>每一颗星<br>都在等一个归途。</h2><p class="english">Lost, found,<br>and loved again.</p><p>让寻找有迹可循，让善意被温柔收藏。</p><div class="actions">${button('✦ 我丢失了','publish','primary')}</div></aside></div><div class="section-title"><h2>散落在校园的星星</h2>${button('寻觅全部 →','search')}</div>${notes(items)}`;
  if(route==='map')html=hero('校园星图 · 循光而行',2)+`<section class="panel"><p>点击星点浏览物品登记位置。</p>${mapView()}</section>`;
+ if(route==='search')html=hero('天璇 · 寻觅星点',1)+`<form data-form="search" class="panel"><div class="searchbar"><input name="keyword" value="${esc(filter.keyword)}" placeholder="物品名称或特征" aria-label="关键词"><button class="primary">寻找</button><button type="button" data-action="clear-filter">重置</button></div>${fields()}</form><p class="muted">找到 ${filtered().length} 颗星星</p>${notes(filtered())}`;
  if(!html)html=hero(pages[route]||'拾星')+'<section class="panel"><p>本教学阶段尚未实现此功能，请按阶段说明继续学习。</p></section>';
  $('#app').innerHTML=html;document.title=`${pages[route]} · 拾星`;}
 function verificationName(){return '尚未加入认证功能'}
@@ -56,9 +59,11 @@ document.addEventListener('click',async e=>{const b=e.target.closest('button');i
  if(b.dataset.go){$('#modal').close();go(b.dataset.go);return}if(b.dataset.item){selected=b.dataset.item;go('detail');return}
  if(b.dataset.pin){const x=items.find(i=>i.id===b.dataset.pin);modal(`${star(x.status)} ${esc(x.title)}`,`<p>${esc(x.area)} · ${labels[x.status]}</p><p>${esc(x.description)}</p><button data-preview="${esc(x.id)}">查看详情</button>`);return}
  if(b.dataset.preview){selected=b.dataset.preview;$('#modal').close();go('detail');return}
- const a=b.dataset.action;
+ const a=b.dataset.action;if(a==='filters')modal('筛选星点',`<form data-form="filter">${fields()}<button class="primary">应用筛选</button></form>`);
+ if(a==='clear-filter'){filter={keyword:'',category:'',area:'',date:'',status:''};render()}
 });
 document.addEventListener('submit',e=>{const form=e.target,kind=form.dataset.form;if(!kind)return;e.preventDefault();const d=Object.fromEntries(new FormData(form));
+ if(kind==='search'||kind==='filter'){filter={...filter,...d};$('#modal').close();go('search')}
 });
 const navigationStars=[
  ['home','天枢','星图首页',86,25],['search','天璇','寻觅星点',78,66],
